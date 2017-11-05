@@ -1,21 +1,33 @@
+/* open Bs_fetch; */
 [%bs.raw {|require('./app.css')|}];
-
-[@bs.module] external logo : string = "./logo.svg";
-
 let component = ReasonReact.statelessComponent("App");
 
-let make = (~message, _children) => {
+
+let make = (_children) => {
+  let parseResponseJson = (json) =>
+    Js.log("test");
+  {
   ...component,
+  didMount: (_self) => {
+    Bs_fetch.fetch("https://api.github.com/users/anbarasiu/starred")
+    |> Js.Promise.then_(Bs_fetch.Response.text)
+    |> Js.Promise.then_(
+      fun(jsonText) => {
+        Js.log(jsonText);
+        Js.Promise.resolve()
+      }
+    );
+    ReasonReact.NoUpdate
+  },
   render: (_self) =>
     <div className="App">
-      <div className="App-header">
-        <img src=logo className="App-logo" alt="logo" />
-        <h2> (ReasonReact.stringToElement(message)) </h2>
+      <h2> (ReasonReact.stringToElement("Issues from Starred Repos")) </h2>
+      <div>
+        /* <LoginButton /> */
+        <List>
+          <ListItem />
+        </List>
       </div>
-      <p className="App-intro">
-        (ReasonReact.stringToElement("To get started, edit"))
-        <code> (ReasonReact.stringToElement(" src/App.re ")) </code>
-        (ReasonReact.stringToElement("and save to reload."))
-      </p>
     </div>
+}
 };
