@@ -11,21 +11,20 @@ type repository = {
   open_issues_count: int
 };
 
-type repositories = list(repository);
+type repositories = array(repository);
 
 let component = ReasonReact.statelessComponent("App");
 
 let make = (_children) => {
-  let parseResponseJson = (json) :repositories => 
-   [  
-    {
-      id: json |> field("id", int),
-      name: json |> field("name", string),
-      full_name: json |> field("full_name", string),
-      html_url: json |> field("html_url", string),
-      open_issues_count: json |> field("open_issues_count", int)
-    }
-   ];
+  let parseResponseJson = (json) :repository => 
+      {
+        id: json |> field("id", int),
+        name: json |> field("name", string),
+        full_name: json |> field("full_name", string),
+        html_url: json |> field("html_url", string),
+        open_issues_count: json |> field("open_issues_count", int)
+      };
+  let parseArrayResponseJson = (json) :repositories => field("", array(parseResponseJson), json);
   {
   ...component,
   didMount: (_self) => {
@@ -33,8 +32,7 @@ let make = (_children) => {
     |> Js.Promise.then_(Bs_fetch.Response.text)
     |> Js.Promise.then_(
       fun(jsonText) => {
-        Js.log(jsonText);
-        Js.Promise.resolve(parseResponseJson(jsonText))
+      Js.Promise.resolve(parseArrayResponseJson(Js.Json.parseExn(jsonText)))
       }
     );
     ReasonReact.NoUpdate
