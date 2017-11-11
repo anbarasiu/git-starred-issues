@@ -1,8 +1,8 @@
 let component = ReasonReact.statelessComponent("List");
 
-let make = (_children) => {
+let make = (children) => {
   {
   ...component,
-  render: (_self) => <ul> </ul>
+  render: (_self) => <ul> {ReasonReact.arrayToElement(children)} </ul>
   }
 };
