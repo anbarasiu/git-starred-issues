@@ -1,4 +1,4 @@
-let env = "DEV";
+let env = "";
 
 let getStarredRepos = () : Js.Promise.t(Bs_fetch.response) => 
     env === "DEV" ? 

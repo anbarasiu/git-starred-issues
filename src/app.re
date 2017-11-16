@@ -25,7 +25,7 @@ let handleReposLoaded = (repos, _self) => {
 };
 
 let make = (_children) => {
-  let parseResponseJson = (json) :repository => 
+  let parseResponseJson = (json: Js.Json.t) :repository => 
       {
         id: json |> field("id", int),
         name: json |> field("name", string),
@@ -33,7 +33,7 @@ let make = (_children) => {
         html_url: json |> field("html_url", string),
         open_issues_count: json |> field("open_issues_count", int)
       };
-  let parseArrayResponseJson = (json) :repositories => field("items", array(parseResponseJson), json);
+  let parseArrayResponseJson = (json: Js.Json.t) :repositories => array(parseResponseJson, json);
   let fetchRepos = () => {
     Services.getStarredRepos()
     |> Js.Promise.then_(Bs_fetch.Response.text)
