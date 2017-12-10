@@ -12,17 +12,31 @@ type repository = {
 
 type repositories = array(repository);
 
+type issue = {
+  id: int
+};
+
+type issues = array(issue);
+
+type action = 
+  | GetRepos(repositories)
+  | GetRepoIssues(issues);
+
 type state = {
-  repositories: option(repositories)
+  repositories: option(repositories),
+  issues: option(issues)
 };
 
-let component = ReasonReact.statefulComponent("App");
-
-let handleReposLoaded = (repos, _self) => {
-  ReasonReact.Update({
-    repositories: Some(repos)
-  });
+let getRepoIssues = (repos, self) => {
+  Array.iter((repo: repository) => {
+    let repoId: int = repo.id;
+    Js.log(repoId);
+    /* self.reduce(repoId => GetRepoIssues(repoId)) */
+  }, repos);
+  Js.log(repos);
 };
+
+let component = ReasonReact.reducerComponent("App");
 
 let make = (_children) => {
   let parseResponseJson = (json: Js.Json.t) :repository => 
@@ -45,14 +59,20 @@ let make = (_children) => {
   };
   {
     ...component,
-    initialState: fun() => {repositories: None},
-    didMount: ({update}) => {
+    initialState: fun() => {repositories: None, issues: None},
+    didMount: (self) => {
+      let handleReposLoaded = self.reduce(repositories => GetRepos(repositories));
       fetchRepos()
       |> Js.Promise.then_ (fun(repos) => {
-        update(handleReposLoaded, repos);
+        handleReposLoaded(repos);
         Js.Promise.resolve ();
       });
       ReasonReact.NoUpdate
+    },
+    reducer: fun(action, state) =>
+      switch action {
+      | GetRepos (repos) => ReasonReact.UpdateWithSideEffects({...state, repositories: Some(repos)}, (self) => getRepoIssues(repos, self))
+      | GetRepoIssues (issues) => ReasonReact.Update {...state, issues: Some(issues)}
     },
     render: fun({state}) => {
       let repoItems = switch (state.repositories) {
