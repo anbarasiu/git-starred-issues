@@ -7,7 +7,8 @@ type repository = {
   name: string,
   full_name: string,
   html_url: string,
-  open_issues_count: int
+  open_issues_count: int,
+  url: string
 };
 
 type repositories = array(repository);
@@ -27,13 +28,30 @@ type state = {
   issues: option(issues)
 };
 
-let getRepoIssues = (repos, self) => {
+let fetchIssues = (issuesUrl) => {
+  Js.log(issuesUrl);
+  Services.getIssuesForRepo(issuesUrl)
+  |> Js.Promise.then_(Bs_fetch.Response.text)
+  |> Js.Promise.then_(
+    fun(jsonText) => {
+      Js.log(jsonText);
+      Js.Promise.resolve(jsonText)
+    }
+  );
+};
+
+let getRepoIssues = (repos, {ReasonReact.reduce: reduce}) => {
   Array.iter((repo: repository) => {
-    let repoId: int = repo.id;
-    Js.log(repoId);
-    /* self.reduce(repoId => GetRepoIssues(repoId)) */
+    let issuesUrl: string = repo.url;
+    fetchIssues(issuesUrl)
+    |> Js.Promise.then_ (fun(issues) => {
+      reduce(issues => GetRepoIssues(issues));
+      Js.Promise.resolve ();
+    });
+    Js.log(issuesUrl);
+    /* 
+    Js.log(issuesUrl); */
   }, repos);
-  Js.log(repos);
 };
 
 let component = ReasonReact.reducerComponent("App");
@@ -45,7 +63,8 @@ let make = (_children) => {
         name: json |> field("name", string),
         full_name: json |> field("full_name", string),
         html_url: json |> field("html_url", string),
-        open_issues_count: json |> field("open_issues_count", int)
+        open_issues_count: json |> field("open_issues_count", int),
+        url: json |> field("url", string)
       };
   let parseArrayResponseJson = (json: Js.Json.t) :repositories => array(parseResponseJson, json);
   let fetchRepos = () => {

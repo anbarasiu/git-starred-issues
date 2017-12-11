@@ -8,4 +8,4 @@ let getStarredRepos = () : Js.Promise.t(Bs_fetch.response) =>
 let getIssuesForRepo = (url: string) : Js.Promise.t(Bs_fetch.response) => 
     env === "DEV" ? 
     Bs_fetch.fetch("data.json") :
-    Bs_fetch.fetch(url);
+    Bs_fetch.fetch(url ++ "/issues");
