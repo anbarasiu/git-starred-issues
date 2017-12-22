@@ -13,8 +13,17 @@ type repository = {
 
 type repositories = array(repository);
 
+type issueLabel = {
+  id: int,
+  name: string
+};
+
 type issue = {
-  id: int
+  id: int,
+  title: string,
+  body: string,
+  html_url: string
+  /* labels: issueLabel */
 };
 
 type issues = array(issue);
@@ -30,7 +39,10 @@ type state = {
 
 let parseIssuesResponseJson = (json: Js.Json.t) :issue => 
 {
-  id: json |> field("id", int)
+  id: json |> field("id", int),
+  title: json |> field("title", string),
+  body: json |> field("body", string),
+  html_url: json |> field("html_url", string)
 };
 let parseIssuesArrayResponseJson = (json: Js.Json.t) :issues => array(parseIssuesResponseJson, json);
 
@@ -45,13 +57,13 @@ let fetchIssues = (issuesUrl) => {
   );
 };
 
-let getRepoIssues = (repos, {ReasonReact.reduce: reduce}) => {
+let getRepoIssues = (repos, self) => {
+  let handleIssuesLoaded = self.ReasonReact.reduce(issues => GetRepoIssues(issues));
   Array.iter((repo: repository) => {
     let issuesUrl: string = repo.url;
     fetchIssues(issuesUrl)
     |> Js.Promise.then_ (fun(issues: issues) => {
-      Js.log(issues);
-      reduce(issues => GetRepoIssues(issues));
+      handleIssuesLoaded(issues);
       Js.Promise.resolve ();
     });
     Js.log(issuesUrl);
@@ -95,7 +107,14 @@ let make = (_children) => {
     reducer: fun(action, state) =>
       switch action {
       | GetRepos (repos) => ReasonReact.UpdateWithSideEffects({...state, repositories: Some(repos)}, (self) => getRepoIssues(repos, self))
-      | GetRepoIssues (issues) => ReasonReact.Update({...state, issues: Some(issues)})
+      | GetRepoIssues (issues) => {
+        let oldIssues = switch(state.issues) {
+        | Some(issues) => issues;
+        | None => [||];
+        };
+        let newIssues = Array.append(issues, oldIssues);
+        ReasonReact.Update({...state, issues: Some(newIssues)})
+      }
     },
     render: fun({state}) => {
       let repoItems = switch (state.repositories) {
@@ -105,7 +124,7 @@ let make = (_children) => {
         | None => ReasonReact.stringToElement("Loading Repos...")
       };
       let issues  =switch(state.issues){
-      | Some(issues) => ReasonReact.arrayToElement (Array.map((fun (issue: issue) => <ListItem key=string_of_int(issue.id) name=string_of_int(issue.id) url="" issues=0 />), issues))
+      | Some(issues) => ReasonReact.arrayToElement (Array.map((fun (issue: issue) => <ListItem key=string_of_int(issue.id) name=issue.title url=issue.html_url issues=0 />), issues))
       | None => ReasonReact.stringToElement("Loading Issues...")
       };
       <div className="App">
