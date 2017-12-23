@@ -10,7 +10,8 @@
     "reason-react",
     "bs-jest",
     "bs-fetch",
-    "bs-json"
+    "bs-json",
+    "bs-css"
   ],
   "reason": {
     "react-jsx": 2

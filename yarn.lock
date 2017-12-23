@@ -1202,6 +1202,12 @@ browserslist@^2.1.2, browserslist@^2.1.3:
     caniuse-lite "^1.0.30000757"
     electron-to-chromium "^1.3.27"
 
+bs-css@^5.2.0:
+  version "5.2.0"
+  resolved "http://dce-mgmt-nexus-elb-1563254443.eu-west-2.elb.amazonaws.com/nexus/content/groups/npm-all/bs-css/-/bs-css-5.2.0.tgz#0752b383651074c28c3f08af9a0a51fdb2fcf9a1"
+  dependencies:
+    glamor "^2.0.0"
+
 bs-fetch@buckletypes/bs-fetch:
   version "0.2.0"
   resolved "https://codeload.github.com/buckletypes/bs-fetch/tar.gz/208f8a552e99c393e1cd9cd4c34894fc7d1cacdd"

@@ -124,7 +124,7 @@ let make = (_children) => {
         | None => ReasonReact.stringToElement("Loading Repos...")
       };
       let issues  =switch(state.issues){
-      | Some(issues) => ReasonReact.arrayToElement (Array.map((fun (issue: issue) => <ListItem key=string_of_int(issue.id) name=issue.title url=issue.html_url issues=0 />), issues))
+      | Some(issues) => ReasonReact.arrayToElement (Array.map((fun (issue: issue) => <ListItem key=string_of_int(issue.id) name=issue.title url=issue.html_url />), issues))
       | None => ReasonReact.stringToElement("Loading Issues...")
       };
       <div className="App">
@@ -132,8 +132,8 @@ let make = (_children) => {
         <div>
           /* <LoginButton /> */
           <List>
-            {repoItems}
             {issues}
+            {repoItems}
           </List>
         </div>
       </div>
