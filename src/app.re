@@ -2,6 +2,13 @@ open Json.Decode;
 
 [%bs.raw {|require('./app.css')|}];
 
+let styles = Css.({
+  "container": style([
+    display(Flex),
+    flexWrap(Wrap)
+  ])
+});
+
 type repository = {
   id: int,
   name: string,
@@ -22,7 +29,8 @@ type issue = {
   id: int,
   title: string,
   body: string,
-  html_url: string
+  html_url: string,
+  state: string
   /* labels: issueLabel */
 };
 
@@ -42,6 +50,7 @@ let parseIssuesResponseJson = (json: Js.Json.t) :issue =>
   id: json |> field("id", int),
   title: json |> field("title", string),
   body: json |> field("body", string),
+  state: json |> field("state", string),
   html_url: json |> field("html_url", string)
 };
 let parseIssuesArrayResponseJson = (json: Js.Json.t) :issues => array(parseIssuesResponseJson, json);
@@ -123,18 +132,26 @@ let make = (_children) => {
           )
         | None => ReasonReact.stringToElement("Loading Repos...")
       };
-      let issues  =switch(state.issues){
-      | Some(issues) => ReasonReact.arrayToElement (Array.map((fun (issue: issue) => <ListItem key=string_of_int(issue.id) name=issue.title url=issue.html_url />), issues))
+      let issues = switch(state.issues){
+      | Some(issues) => ReasonReact.arrayToElement (
+              issues
+              |> Array.to_list
+              |> List.filter(issue => issue.state === "open")
+              |> Array.of_list
+              |> Array.map(issue => <ListItem key=string_of_int(issue.id) name=issue.title url=issue.html_url />)
+          )
       | None => ReasonReact.stringToElement("Loading Issues...")
       };
       <div className="App">
         <h2> (ReasonReact.stringToElement("Issues from Starred Repos")) </h2>
-        <div>
+        <div className=styles##container>
           /* <LoginButton /> */
-          <List>
+          <Liste>
             {issues}
+          </Liste>
+          <Liste>
             {repoItems}
-          </List>
+          </Liste>
         </div>
       </div>
     }

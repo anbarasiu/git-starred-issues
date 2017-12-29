@@ -3,11 +3,15 @@ let styles = Css.({
     border(px(1),Solid,black),
     borderRadius(px(10)),
     padding(px(0)),
-    margin(px(8))
+    margin(px(8)),
+    width(pct(100.0)),
+    media("(min-width: 678px)", [
+      width(pct(47.0))
+    ])
   ])
 });
 
-let component = ReasonReact.statelessComponent("List");
+let component = ReasonReact.statelessComponent("Liste");
 
 let make = (children) => {
   {

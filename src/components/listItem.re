@@ -13,6 +13,9 @@ let styles = Css.({
   ]),
   "title": style([
     fontWeight(Bold)
+  ]),
+  "link": style([
+    wordWrap(BreakWord)
   ])
 });
 
@@ -28,7 +31,7 @@ let make = (~name, ~url, ~issues=?, _children) => {
     };
     <li className=styles##listItem>
       <div className=styles##title>(ReasonReact.stringToElement(name))</div>
-      <a href=url>(ReasonReact.stringToElement(url))</a>
+      <a className=styles##link href=url>(ReasonReact.stringToElement(url))</a>
       <div className=styles##issues>(ReasonReact.stringToElement({issuesCount}))</div>
     </li>
     }
