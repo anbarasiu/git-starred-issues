@@ -1,4 +1,5 @@
 open Json.Decode;
+open Types;
 
 [%bs.raw {|require('./app.css')|}];
 
@@ -9,54 +10,37 @@ let styles = Css.({
   ])
 });
 
-type repository = {
-  id: int,
-  name: string,
-  full_name: string,
-  html_url: string,
-  open_issues_count: int,
-  url: string
-};
-
-type repositories = array(repository);
-
-type issueLabel = {
-  id: int,
-  name: string
-};
-
-type issue = {
-  id: int,
-  title: string,
-  body: string,
-  html_url: string,
-  state: string
-  /* labels: issueLabel */
-};
-
-type issues = array(issue);
-
 type action = 
   | GetRepos(repositories)
-  | GetRepoIssues(issues);
+  | GetRepoIssues(issues)
+  | GetRepoLabels(issueLabels)
+  | FilterRepoIssues(string);
 
 type state = {
   repositories: option(repositories),
-  issues: option(issues)
+  issues: option(issues),
+  labels: issueLabels
 };
 
+let parseIssueLabelsResponseJson = (json: Js.Json.t) :issueLabel => {
+  id: json |> field("id", int),
+  name: json |> field("name", string),
+  color: json |> field("color", string)
+};
 let parseIssuesResponseJson = (json: Js.Json.t) :issue => 
 {
   id: json |> field("id", int),
   title: json |> field("title", string),
   body: json |> field("body", string),
   state: json |> field("state", string),
-  html_url: json |> field("html_url", string)
+  html_url: json |> field("html_url", string),
+  labels: json |> field("labels", array(parseIssueLabelsResponseJson))
 };
 let parseIssuesArrayResponseJson = (json: Js.Json.t) :issues => array(parseIssuesResponseJson, json);
 
+let parseLabelsArrayResponseJson = (json: Js.Json.t) :issueLabels => array(parseIssueLabelsResponseJson, json);
+
 let fetchIssues = (issuesUrl) => {
-  Js.log(issuesUrl);
   Services.getIssuesForRepo(issuesUrl)
   |> Js.Promise.then_(Bs_fetch.Response.text)
   |> Js.Promise.then_(
@@ -66,13 +50,30 @@ let fetchIssues = (issuesUrl) => {
   );
 };
 
+let fetchLabels = (labelsUrl) => {
+  Services.getLabelsForRepo(labelsUrl)
+  |> Js.Promise.then_(Bs_fetch.Response.text)
+  |> Js.Promise.then_(
+    fun(jsonText) => {
+      Js.Promise.resolve(parseLabelsArrayResponseJson(Js.Json.parseExn(jsonText)))
+    }
+  );
+};
+
 let getRepoIssues = (repos, self) => {
   let handleIssuesLoaded = self.ReasonReact.reduce(issues => GetRepoIssues(issues));
+  let handleLabelsLoaded = self.ReasonReact.reduce(labels => GetRepoLabels(labels));
   Array.iter((repo: repository) => {
-    let issuesUrl: string = repo.url;
+    let issuesUrl: string = repo.issues_url;
     fetchIssues(issuesUrl)
     |> Js.Promise.then_ (fun(issues: issues) => {
       handleIssuesLoaded(issues);
+      Js.Promise.resolve ();
+    });
+    let labelsUrl: string = repo.labels_url;
+    fetchLabels(labelsUrl)
+    |> Js.Promise.then_ (fun(labels: issueLabels) => {
+      handleLabelsLoaded(labels);
       Js.Promise.resolve ();
     });
     Js.log(issuesUrl);
@@ -89,6 +90,8 @@ let make = (_children) => {
         full_name: json |> field("full_name", string),
         html_url: json |> field("html_url", string),
         open_issues_count: json |> field("open_issues_count", int),
+        issues_url: json |> field("issues_url", string),
+        labels_url: json |> field("labels_url", string),
         url: json |> field("url", string)
       };
   let parseArrayResponseJson = (json: Js.Json.t) :repositories => array(parseResponseJson, json);
@@ -103,7 +106,7 @@ let make = (_children) => {
   };
   {
     ...component,
-    initialState: fun() => {repositories: None, issues: None},
+    initialState: fun() => {repositories: None, issues: None, labels: [||]},
     didMount: (self) => {
       let handleReposLoaded = self.reduce(repositories => GetRepos(repositories));
       fetchRepos()
@@ -117,14 +120,35 @@ let make = (_children) => {
       switch action {
       | GetRepos (repos) => ReasonReact.UpdateWithSideEffects({...state, repositories: Some(repos)}, (self) => getRepoIssues(repos, self))
       | GetRepoIssues (issues) => {
-        let oldIssues = switch(state.issues) {
-        | Some(issues) => issues;
-        | None => [||];
-        };
-        let newIssues = Array.append(issues, oldIssues);
-        ReasonReact.Update({...state, issues: Some(newIssues)})
-      }
-    },
+          let oldIssues = switch(state.issues) {
+          | Some(issues) => issues
+            |> Array.to_list
+            |> List.filter(issue => issue.state === "open")
+            |> Array.of_list;
+          | None => [||];
+          };
+          let newIssues = Array.append(issues, oldIssues);
+          ReasonReact.Update({...state, issues: Some(newIssues)})
+        }
+      | GetRepoLabels (labels) => {
+          let oldLabels = state.labels;
+          let newLabels = Array.append(labels, oldLabels);
+          ReasonReact.Update({...state, labels: newLabels})
+        }
+      | FilterRepoIssues (label) => {
+          let issues = switch(state.issues) {
+            | Some(issues) => issues
+              |> Array.to_list
+              |> List.filter((issue: issue) => issue.labels
+                                        |> Array.to_list
+                                        /* |> List.filter(label => label == label)) */
+                                        |> List.length > 0)
+              |> Array.of_list;
+            | None => [||];
+            };
+          ReasonReact.Update({...state, issues: Some(issues)})
+        }
+      },
     render: fun({state}) => {
       let repoItems = switch (state.repositories) {
         | Some(repos) => ReasonReact.arrayToElement (Array.map(
@@ -135,15 +159,13 @@ let make = (_children) => {
       let issues = switch(state.issues){
       | Some(issues) => ReasonReact.arrayToElement (
               issues
-              |> Array.to_list
-              |> List.filter(issue => issue.state === "open")
-              |> Array.of_list
               |> Array.map(issue => <ListItem key=string_of_int(issue.id) name=issue.title url=issue.html_url />)
           )
       | None => ReasonReact.stringToElement("Loading Issues...")
       };
       <div className="App">
         <h2> (ReasonReact.stringToElement("Issues from Starred Repos")) </h2>
+        <Filter labels=state.labels/>
         <div className=styles##container>
           /* <LoginButton /> */
           <Liste>
