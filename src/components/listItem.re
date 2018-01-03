@@ -29,7 +29,7 @@ let make = (~name, ~url, ~issues=?, _children) => {
     | None => ""
     | Some(issues) => "Issues: " ++ string_of_int(issues)
     };
-    <li className=styles##listItem>
+    <li className=styles##listItem key=name>
       <div className=styles##title>(ReasonReact.stringToElement(name))</div>
       <a className=styles##link href=url>(ReasonReact.stringToElement(url))</a>
       <div className=styles##issues>(ReasonReact.stringToElement({issuesCount}))</div>

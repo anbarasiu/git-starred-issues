@@ -64,19 +64,18 @@ let getRepoIssues = (repos, self) => {
   let handleIssuesLoaded = self.ReasonReact.reduce(issues => GetRepoIssues(issues));
   let handleLabelsLoaded = self.ReasonReact.reduce(labels => GetRepoLabels(labels));
   Array.iter((repo: repository) => {
-    let issuesUrl: string = repo.issues_url;
-    fetchIssues(issuesUrl)
+    let url: string = repo.url;
+    fetchIssues(url)
     |> Js.Promise.then_ (fun(issues: issues) => {
       handleIssuesLoaded(issues);
       Js.Promise.resolve ();
     });
-    let labelsUrl: string = repo.labels_url;
-    fetchLabels(labelsUrl)
+    fetchLabels(url)
     |> Js.Promise.then_ (fun(labels: issueLabels) => {
       handleLabelsLoaded(labels);
       Js.Promise.resolve ();
     });
-    Js.log(issuesUrl);
+    Js.log(url);
   }, repos);
 };
 
@@ -132,24 +131,42 @@ let make = (_children) => {
         }
       | GetRepoLabels (labels) => {
           let oldLabels = state.labels;
-          let newLabels = Array.append(labels, oldLabels);
-          ReasonReact.Update({...state, labels: newLabels})
+          let oldLabelsList = Array.to_list(oldLabels);
+          let labelsList = Array.to_list(labels);
+          let rec find = (e) =>
+            fun
+            | [] => false
+            | [h, ...t] => h == e || find(e, t);
+
+          let rec help_append_list = (l1, l2) =>
+            switch l1 {
+            | [] => l2
+            | [h, ...t] =>
+              if (find(h, l2)) {
+                help_append_list(t, l2);
+              } else {
+                help_append_list(t, [h, ...l2]);
+              }
+            };
+          ReasonReact.Update({...state, labels: Array.of_list(help_append_list(oldLabelsList, labelsList))})
         }
       | FilterRepoIssues (label) => {
           let issues = switch(state.issues) {
             | Some(issues) => issues
               |> Array.to_list
-              |> List.filter((issue: issue) => issue.labels
+              |> List.filter((issue: issue) => {
+                let labels = issue.labels;
+                labels
                                         |> Array.to_list
-                                        /* |> List.filter(label => label == label)) */
-                                        |> List.length > 0)
+                                        |> List.filter(l => l.name == label)
+                                        |> List.length > 0})
               |> Array.of_list;
             | None => [||];
             };
           ReasonReact.Update({...state, issues: Some(issues)})
         }
       },
-    render: fun({state}) => {
+    render: fun({state, reduce}) => {
       let repoItems = switch (state.repositories) {
         | Some(repos) => ReasonReact.arrayToElement (Array.map(
             (fun (repo: repository) => <ListItem key=repo.name name=repo.name url=repo.html_url issues=repo.open_issues_count />), repos)
@@ -165,7 +182,7 @@ let make = (_children) => {
       };
       <div className="App">
         <h2> (ReasonReact.stringToElement("Issues from Starred Repos")) </h2>
-        <Filter labels=state.labels/>
+        <Filter labels=state.labels onFilterChange=reduce(() => FilterRepoIssues)/>
         <div className=styles##container>
           /* <LoginButton /> */
           <Liste>
