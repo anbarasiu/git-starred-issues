@@ -16,9 +16,12 @@ type action =
   | GetRepoLabels(issueLabels)
   | FilterRepoIssues(string);
 
+let filterRepoIssues = label => FilterRepoIssues(label);
+
 type state = {
   repositories: option(repositories),
   issues: option(issues),
+  selectedIssues: option(issues),
   labels: issueLabels
 };
 
@@ -105,7 +108,7 @@ let make = (_children) => {
   };
   {
     ...component,
-    initialState: fun() => {repositories: None, issues: None, labels: [||]},
+    initialState: fun() => {repositories: None, issues: None, selectedIssues: None, labels: [||]},
     didMount: (self) => {
       let handleReposLoaded = self.reduce(repositories => GetRepos(repositories));
       fetchRepos()
@@ -163,7 +166,7 @@ let make = (_children) => {
               |> Array.of_list;
             | None => [||];
             };
-          ReasonReact.Update({...state, issues: Some(issues)})
+          ReasonReact.Update({...state, selectedIssues: Some(issues)})
         }
       },
     render: fun({state, reduce}) => {
@@ -173,7 +176,7 @@ let make = (_children) => {
           )
         | None => ReasonReact.stringToElement("Loading Repos...")
       };
-      let issues = switch(state.issues){
+      let selectedIssues = switch(state.selectedIssues){
       | Some(issues) => ReasonReact.arrayToElement (
               issues
               |> Array.map(issue => <ListItem key=string_of_int(issue.id) name=issue.title url=issue.html_url />)
@@ -182,11 +185,11 @@ let make = (_children) => {
       };
       <div className="App">
         <h2> (ReasonReact.stringToElement("Issues from Starred Repos")) </h2>
-        <Filter labels=state.labels onFilterChange=reduce(() => FilterRepoIssues)/>
+        <Filter labels=state.labels onFilterChange=(reduce(filterRepoIssues))/>
         <div className=styles##container>
           /* <LoginButton /> */
           <Liste>
-            {issues}
+            {selectedIssues}
           </Liste>
           <Liste>
             {repoItems}

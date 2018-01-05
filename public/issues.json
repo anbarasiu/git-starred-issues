@@ -35,6 +35,11 @@
           "id": 208045946,
           "name": "bug",
           "color": "f29513"
+        },
+        {
+          "id": 208045946,
+          "name": "good-for-beginners",
+          "color": "f29513"
         }
       ],
       "assignee": {

@@ -8,18 +8,13 @@ let styles = Css.({
         margin(px(8))
     ])
   });
-
-  type state = {
-      selectedFilter: string
-  };
   
   let component = ReasonReact.statelessComponent("Filter");
   
   let make = (~labels, ~onFilterChange, children) => {
-    let onChange = (_event, self) => onFilterChange(self.state.selectedFilter);
+    let onChange = (event, _self) => onFilterChange(ReactDOMRe.domElementToObj(ReactEventRe.Form.target(event))##value);
     {
     ...component,
-    initialState: fun() => { selectedFilter: ""},
     render: (self) => {
         let labelOptions = ReasonReact.arrayToElement (
             Array.map(fun(label: issueLabel) => <option key=string_of_int(label.id)>{ReasonReact.stringToElement(label.name)}</option>, labels)
